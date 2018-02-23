@@ -53,11 +53,12 @@ public class CoderDecoder{
 					//int pix = ((a << 24) + (r << 16) + (g << 8) + b);
 
 					//Save to f(x,y) 2D matrix
-					f_xy[y][y] = pix;
-
+					f_xy[y][x] = pix;
+					//System.out.print(f_xy[y][x] +  " ");
 					img.setRGB(x,y,pix);
 					ind++;
 				}
+				//System.out.println();
 			}
 
 
@@ -67,7 +68,95 @@ public class CoderDecoder{
 			e.printStackTrace();
 		}
 	}
+	public void dct_decode(int[][] f_uv, int[][] f_xy, int quant){
+		//dequantize
+		for(int i = 0; i < height; i++){
+			for(int j = 0; j < width; j++){
+				f_uv[i][j] = (int)(f_uv[i][j]* Math.pow(2, quant));
+			}
+		}
+		//initialize C[u][v] matrix
+		double[][] c_uv = new double[height][width];
+		for(int i = 0; i < height; i++){
+			for(int j = 0; j < width; j++){
+				if(i == 0 || j == 0 ){
+					c_uv[i][j] = 1.0/Math.sqrt(2);
+				}else{
+					c_uv[i][j] = 1.0;
+				}
+			}
+		}
+		//do inverse function
+		int starti = 0;
+		while(starti != height){
+			int startj =0;
+			while(startj != width){
+				for(int x = starti; x < starti + 8; x++){
+					for(int y = startj; y < startj + 8; y++){
+						f_xy[x][y] = (int)Math.round((1.0/4.0)*inverse_cosine(starti, startj, x,y, f_xy, f_uv, c_uv));
+					}
+				}
+				startj += 8;
+			}
+			starti += 8;
+		}
+	}
+	public double inverse_cosine(int row, int col,int x, int y, int[][]f_xy, int[][] f_uv, double[][] c_uv){
+		double sum = 0.0;
+		for(int u = row; u < row + 8; u++){
+			for(int v = col; v < col + 8; v++){
+				sum += c_uv[u][v]*f_uv[u][v]*Math.cos(((2*x + 1)*u*Math.PI)/16.0)*Math.cos(((2*y +1)*v*Math.PI)/16.0);
+			}
+		}
+		return sum;
+	}
+	public void dct_encode(int[][] f_xy, int[][] f_uv, int quant){
+		int q = (int)Math.pow(2, quant);
+		//initialize C[u][v] matrix
+		double[][] c_uv = new double[height][width];
+		for(int i = 0; i < height; i++){
+			for(int j = 0; j < width; j++){
+				if(i == 0 || j == 0 ){
+					c_uv[i][j] = 1.0/Math.sqrt(2);
+				}else{
+					c_uv[i][j] = 1.0;
+				}
+			}
+		}
+		//break into 8x8 
+		int starti = 0;
+		while(starti != height){ 
+			int startj = 0;
+			while(startj != width){
+				//and feed it to cosine function block by block
+				for(int u = starti; u < starti + 8; u++){
 
+						for(int v = startj; v < startj + 8; v++){
+							//quantize here as well
+							f_uv[u][v] = (int)Math.round(((1.0/4.0)*c_uv[u][v]*cosine(starti, startj, u, v, f_xy, f_uv))/q);
+							//System.out.print(f_uv[u][v] +  " ");
+						}
+
+				}
+				//System.out.println();
+				startj += 8;
+			}
+			starti += 8;
+		}
+		
+	}
+	public double cosine(int row, int col,int u, int v, int[][]f_xy, int[][] f_uv){
+		double sumCos = 0.0;
+		for(int x = row; x < row + 8; x++){
+			for(int y = col; y < col + 8; y++){
+				sumCos += f_xy[x][y] * Math.cos( ((2*x + 1)*u*Math.PI)/16.0) * Math.cos(((2*y +1)*v*Math.PI)/16.0);
+			}
+		}
+		return sumCos;
+	}
+	public void display(BufferedImage img, BufferedImage imgMod, int[][] f_xy, int delMode, int latency){
+		
+	}
 
 	public static void main(String[] args) {
 		String imgName = args[0];
@@ -75,6 +164,7 @@ public class CoderDecoder{
 		int delMode = Integer.parseInt(args[2]);
 		int latency = Integer.parseInt(args[3]);
 		BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		BufferedImage imgMod = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 
 		//Encoder
 		// Create and store original Image
@@ -82,12 +172,18 @@ public class CoderDecoder{
 		CoderDecoder cd = new CoderDecoder();
 		int[][] f_xy = new int[height][width];
 		cd.readOriginal(imgName, img, f_xy);
-		//dct(f_xy);
-
+		int[][] f_uv = new int[height][width];
 		// Quantize DC and AC based on quantization table 
+		cd.dct_encode(f_xy,f_uv, quant);
 		//Decoder
 		// Dequantize DC and AC's based on uniform quantization table
-		// Inverse DCT and display image based on M parameter
+		// Inverse DCT
+		cd.dct_decode(f_uv, f_xy, quant);
+		// display image based on M parameter
+		cd.display(img, imgMod, f_xy, delMode, latency);
+		
+
+		
 		
 	}
 
