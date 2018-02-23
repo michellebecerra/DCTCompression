@@ -155,7 +155,55 @@ public class CoderDecoder{
 		return sumCos;
 	}
 	public void display(BufferedImage img, BufferedImage imgMod, int[][] f_xy, int delMode, int latency){
-		
+		int ind = 0;
+		for(int y = 0; y < height; y++){
+
+			for(int x = 0; x < width; x++){
+				
+				//int pix = ((a << 24) + (r << 16) + (g << 8) + b);
+				imgMod.setRGB(x,y,f_xy[y][x]);
+				ind++;
+			}
+		}
+		// Use labels to display the images
+		frame = new JFrame();
+		GridBagLayout gLayout = new GridBagLayout();
+		frame.getContentPane().setLayout(gLayout);
+
+		JLabel lbText1 = new JLabel("Original image (Left)");
+		lbText1.setHorizontalAlignment(SwingConstants.CENTER);
+		JLabel lbText2 = new JLabel("Image after modification (Right)");
+		lbText2.setHorizontalAlignment(SwingConstants.CENTER);
+		lbIm1 = new JLabel(new ImageIcon(img));
+		lbIm2 = new JLabel(new ImageIcon(imgMod));
+
+		GridBagConstraints c = new GridBagConstraints();
+		c.fill = GridBagConstraints.HORIZONTAL;
+		c.anchor = GridBagConstraints.CENTER;
+		c.weightx = 0.5;
+		c.gridx = 0;
+		c.gridy = 0;
+		frame.getContentPane().add(lbText1, c);
+
+		c.fill = GridBagConstraints.HORIZONTAL;
+		c.anchor = GridBagConstraints.CENTER;
+		c.weightx = 0.5;
+		c.gridx = 1;
+		c.gridy = 0;
+		frame.getContentPane().add(lbText2, c);
+
+		c.fill = GridBagConstraints.HORIZONTAL;
+		c.gridx = 0;
+		c.gridy = 1;
+		frame.getContentPane().add(lbIm1, c);
+
+		c.fill = GridBagConstraints.HORIZONTAL;
+		c.gridx = 1;
+		c.gridy = 1;
+		frame.getContentPane().add(lbIm2, c);
+
+		frame.pack();
+		frame.setVisible(true);
 	}
 
 	public static void main(String[] args) {
