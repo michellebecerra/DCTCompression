@@ -50,9 +50,9 @@ public class CoderDecoder{
 
 					//System.out.println(r);
 					//Save to f(x,y) 2D matrix range -127 to 128 for DCT
-					f_xyR[y][x] = (r & 0xff) - 128;
-					f_xyG[y][x] = (g & 0xff) - 128;
-					f_xyB[y][x] = (b & 0xff) - 128;
+					f_xyR[y][x] = (r);
+					f_xyG[y][x] = (g);
+					f_xyB[y][x] = (b);
 
 					// if( 0 <= x && x <= 7 && 0 <= y && y <= 7){
 					// 	System.out.print(f_xyR[y][x] + " ");
@@ -82,7 +82,8 @@ public class CoderDecoder{
 	}
 	public void dct_decode(int[][] f_uvR, int[][] f_uvG, int[][] f_uvB, int[][] f_xyR, int[][] f_xyG, int[][] f_xyB, int quant){
 		//dequantize
- 
+ 		int xi = 0;
+ 		int yi = 0;
 		//do inverse function
 		int starti = 0;
 		while(starti != height){
@@ -90,11 +91,15 @@ public class CoderDecoder{
 			while(startj != width){
 				for(int x = starti; x < starti + 8; x++){
 					for(int y = startj; y < startj + 8; y++){
-						f_xyR[x][y] = (int)Math.round((0.25)*inverse_cosine(starti, startj, x,y,f_uvR));
-						f_xyG[x][y] = (int)Math.round((0.25)*inverse_cosine(starti, startj, x,y,f_uvG));
-						f_xyB[x][y] = (int)Math.round((0.25)*inverse_cosine(starti, startj, x,y,f_uvB));
+						f_xyR[x][y] = (int)Math.round((0.25)*inverse_cosine(starti, startj, xi,yi,f_uvR));
+						f_xyG[x][y] = (int)Math.round((0.25)*inverse_cosine(starti, startj, xi,yi,f_uvG));
+						f_xyB[x][y] = (int)Math.round((0.25)*inverse_cosine(starti, startj, xi,yi,f_uvB));
+						yi++;
 					}
+					yi = 0;
+					xi++;
 				}
+				xi = 0;
 				startj += 8;
 			}
 			starti += 8;
@@ -103,8 +108,12 @@ public class CoderDecoder{
 	public double inverse_cosine(int row, int col,int x, int y, int[][] f_uv){
 		double sum = 0.0;
 		double cu, cv;
+		int ui = -1;
+		int vi = -1;
 		for(int u = row; u < row + 8; u++){
+			ui++;
 			for(int v = col; v < col + 8; v++){
+				vi++;
 					if (u == 0){
             			cu = 1.0/ Math.sqrt(2);
             		}
@@ -118,7 +127,7 @@ public class CoderDecoder{
         			else{
             			cv = 1.0;
             		}
-				sum =  sum + (cu*cv*f_uv[u][v]*Math.cos( ((2*x + 1)*u*Math.PI)/16) * Math.cos(((2*y +1)*v*Math.PI)/16));
+				sum =  sum + (cu*cv*f_uv[u][v]*Math.cos( ((2*x + 1)*ui*Math.PI)/16) * Math.cos(((2*y +1)*vi*Math.PI)/16));
 			}
 		}
 		return sum;
@@ -128,6 +137,8 @@ public class CoderDecoder{
 
 		//break into 8x8 
 		double cu,cv;
+		int ui = 0;
+		int vi = 0;
 		int starti = 0;
 		//boolean i0 = true;
 		while(starti != height){ 
@@ -136,8 +147,9 @@ public class CoderDecoder{
 			while(startj != width){
 				//and feed it to cosine function block by block
 				for(int u = starti; u < starti + 8; u++){
-
+					
 						for(int v = startj; v < startj + 8; v++){
+
 							//System.out.print( u + "," + v + "  ");
 							if (u == 0){
                     			cu = 1.0/ Math.sqrt(2);
@@ -153,15 +165,19 @@ public class CoderDecoder{
                     			cv = 1.0;
                     		}
 							//quantize here as well?
-							f_uvR[u][v] = (int)Math.round((0.25)*cu*cv*cosine(starti, startj, u, v, f_xyR));
-							f_uvG[u][v] = (int)Math.round((0.25)*cu*cv*cosine(starti, startj, u, v, f_xyG));
-							f_uvB[u][v] = (int)Math.round((0.25)*cu*cv*cosine(starti, startj, u, v, f_xyB));
+							f_uvR[u][v] = (int)Math.round((0.25)*cu*cv*cosine(starti, startj, ui, vi, f_xyR));
+							f_uvG[u][v] = (int)Math.round((0.25)*cu*cv*cosine(starti, startj, ui, vi, f_xyG));
+							f_uvB[u][v] = (int)Math.round((0.25)*cu*cv*cosine(starti, startj, ui, vi, f_xyB));
+							vi++;
 							//System.out.print(f_uvR[u][v] +  " ");
 						    //j0 = false;
 						}
+						vi = 0;
+						ui++;
 					//System.out.println();
 					//i0 = false;
 				}
+				ui = 0;
 				//System.out.println("End of block");
 				//System.out.println();
 				startj += 8;
@@ -174,9 +190,13 @@ public class CoderDecoder{
 	}
 	public double cosine(int row, int col,int u, int v, int[][] f_xy){
 		double sumCos = 0.0;
+		int xi = -1;
+		int yi = -1;
 		for(int x = row; x < row + 8; x++){
+			xi++;
 			for(int y = col; y < col + 8; y++){
-				sumCos =  sumCos + (f_xy[x][y] * Math.cos( ((2*x + 1)*u*Math.PI)/16) * Math.cos(((2*y +1)*v*Math.PI)/16));
+				yi++;
+				sumCos =  sumCos + (f_xy[x][y] * Math.cos( ((2*xi + 1)*u*Math.PI)/16) * Math.cos(((2*yi +1)*v*Math.PI)/16));
 			}
 		}
 		return sumCos;
@@ -187,27 +207,27 @@ public class CoderDecoder{
 
 			for(int x = 0; x < width; x++){
 
-				int r = (f_xyR[y][x] + 128);
-				if(r < -127){
-					r = -127;
-				}
-				else if(r > 128){
-					r = 128;
-				}
-				int g = (f_xyG[y][x] + 128);
-				if(g < -127){
-					g = -127;
-				}
-				else if(g > 128){
-					g = 128;
-				}
-				int b = (f_xyB[y][x] + 128);
-				if(b < -127){
-					b= -127;
-				}
-				else if(b > 128){
-					b = 128;
-				}
+				int r = (f_xyR[y][x]);
+				// if(r < -127){
+				// 	r = -127;
+				// }
+				// else if(r > 128){
+				// 	r = 128;
+				// }
+				int g = (f_xyG[y][x]);
+				// if(g < -127){
+				// 	g = -127;
+				// }
+				// else if(g > 128){
+				// 	g = 128;
+				// }
+				int b = (f_xyB[y][x]);
+				// if(b < -127){
+				// 	b= -127;
+				// }
+				// else if(b > 128){
+				// 	b = 128;
+				// }
 				
 				System.out.println(r + " " + g + " " + b);
 				int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);

@@ -69,6 +69,7 @@ public class Test{
                     			cv = 1.0;
                     		}
 							//quantize here as well?
+							
 							f_uvR[u][v] = (int)Math.round((0.25)*cu*cv*cosine(starti, startj, u, v, f_xyR));
 							//f_uv[u][v] = (1.0/4.0)*cosine(starti, startj, u, v, f_xy, f_uv)
 							System.out.print( f_uvR[u][v] + " ");
