@@ -20,7 +20,7 @@ public class CoderDecoder{
 	* Converts RGB to YUV and stores the values in double precision. 
 	* Processes original image and stores it in img.
 	**/
-	public static void readOriginal(String fileName, BufferedImage img, int[][] f_xy){
+	public static void readOriginal(String fileName, BufferedImage img, int[][] f_xyR, int[][] f_xyG, int[][] f_xyB){
 
 		try {
 			File file = new File(fileName);
@@ -47,18 +47,30 @@ public class CoderDecoder{
 					byte g = bytes[ind+height*width];
 					byte b = bytes[ind+height*width*2]; 
 
-					//System.out.println("byte " + r + " " + g + " " + b);
+
+					//System.out.println(r);
+					//Save to f(x,y) 2D matrix range -127 to 128 for DCT
+					f_xyR[y][x] = (r & 0xff) - 128;
+					f_xyG[y][x] = (g & 0xff) - 128;
+					f_xyB[y][x] = (b & 0xff) - 128;
+
+					// if( 0 <= x && x <= 7 && 0 <= y && y <= 7){
+					// 	System.out.print(f_xyR[y][x] + " ");
+					// }
+					//System.out.println("byte " + (r & 0xff) + " " + (g & 0xff) + " " + (b & 0xff));
 
 					int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
 					//int pix = ((a << 24) + (r << 16) + (g << 8) + b);
 
-					//Save to f(x,y) 2D matrix
-					f_xy[y][x] = pix;
+
 					//System.out.print(f_xy[y][x] +  " ");
 					img.setRGB(x,y,pix);
 					ind++;
 				}
-				//System.out.println();
+				// if(0 <= y && y <= 7){
+				// 	System.out.println();
+				// }
+				
 			}
 
 
@@ -68,24 +80,9 @@ public class CoderDecoder{
 			e.printStackTrace();
 		}
 	}
-	public void dct_decode(int[][] f_uv, int[][] f_xy, int quant){
+	public void dct_decode(int[][] f_uvR, int[][] f_uvG, int[][] f_uvB, int[][] f_xyR, int[][] f_xyG, int[][] f_xyB, int quant){
 		//dequantize
-		for(int i = 0; i < height; i++){
-			for(int j = 0; j < width; j++){
-				f_uv[i][j] = (int)(f_uv[i][j]* Math.pow(2, quant));
-			}
-		}
-		//initialize C[u][v] matrix
-		double[][] c_uv = new double[height][width];
-		for(int i = 0; i < height; i++){
-			for(int j = 0; j < width; j++){
-				if(i == 0 || j == 0 ){
-					c_uv[i][j] = 1.0/Math.sqrt(2);
-				}else{
-					c_uv[i][j] = 1.0;
-				}
-			}
-		}
+ 
 		//do inverse function
 		int starti = 0;
 		while(starti != height){
@@ -93,7 +90,9 @@ public class CoderDecoder{
 			while(startj != width){
 				for(int x = starti; x < starti + 8; x++){
 					for(int y = startj; y < startj + 8; y++){
-						f_xy[x][y] = (int)Math.round((1.0/4.0)*inverse_cosine(starti, startj, x,y, f_xy, f_uv, c_uv));
+						f_xyR[x][y] = (int)Math.round((0.25)*inverse_cosine(starti, startj, x,y,f_uvR));
+						f_xyG[x][y] = (int)Math.round((0.25)*inverse_cosine(starti, startj, x,y,f_uvG));
+						f_xyB[x][y] = (int)Math.round((0.25)*inverse_cosine(starti, startj, x,y,f_uvB));
 					}
 				}
 				startj += 8;
@@ -101,67 +100,119 @@ public class CoderDecoder{
 			starti += 8;
 		}
 	}
-	public double inverse_cosine(int row, int col,int x, int y, int[][]f_xy, int[][] f_uv, double[][] c_uv){
+	public double inverse_cosine(int row, int col,int x, int y, int[][] f_uv){
 		double sum = 0.0;
+		double cu, cv;
 		for(int u = row; u < row + 8; u++){
 			for(int v = col; v < col + 8; v++){
-				sum += c_uv[u][v]*f_uv[u][v]*Math.cos(((2*x + 1)*u*Math.PI)/16.0)*Math.cos(((2*y +1)*v*Math.PI)/16.0);
+					if (u == 0){
+            			cu = 1.0/ Math.sqrt(2);
+            		}
+        			else{
+            			cu = 1.0;
+             		}
+        			if (v == 0){
+        				//System.out.println("v:  " + u + " " + v);
+            			cv = 1.0/ Math.sqrt(2);
+            		}
+        			else{
+            			cv = 1.0;
+            		}
+				sum =  sum + (cu*cv*f_uv[u][v]*Math.cos( ((2*x + 1)*u*Math.PI)/16) * Math.cos(((2*y +1)*v*Math.PI)/16));
 			}
 		}
 		return sum;
 	}
-	public void dct_encode(int[][] f_xy, int[][] f_uv, int quant){
+	public void dct_encode(int[][] f_xyR, int[][] f_xyG, int[][] f_xyB, int[][] f_uvR, int[][] f_uvG, int[][] f_uvB, int quant){
 		int q = (int)Math.pow(2, quant);
-		//initialize C[u][v] matrix
-		double[][] c_uv = new double[height][width];
-		for(int i = 0; i < height; i++){
-			for(int j = 0; j < width; j++){
-				if(i == 0 || j == 0 ){
-					c_uv[i][j] = 1.0/Math.sqrt(2);
-				}else{
-					c_uv[i][j] = 1.0;
-				}
-			}
-		}
+
 		//break into 8x8 
+		double cu,cv;
 		int starti = 0;
+		//boolean i0 = true;
 		while(starti != height){ 
 			int startj = 0;
+			//boolean j0 = true;
 			while(startj != width){
 				//and feed it to cosine function block by block
 				for(int u = starti; u < starti + 8; u++){
 
 						for(int v = startj; v < startj + 8; v++){
-							//quantize here as well
-							f_uv[u][v] = (int)Math.round(((1.0/4.0)*c_uv[u][v]*cosine(starti, startj, u, v, f_xy, f_uv))/q);
-							//System.out.print(f_uv[u][v] +  " ");
+							//System.out.print( u + "," + v + "  ");
+							if (u == 0){
+                    			cu = 1.0/ Math.sqrt(2);
+                    		}
+                			else{
+                    			cu = 1.0;
+                     		}
+                			if (v == 0){
+                				//System.out.println("v:  " + u + " " + v);
+                    			cv = 1.0/ Math.sqrt(2);
+                    		}
+                			else{
+                    			cv = 1.0;
+                    		}
+							//quantize here as well?
+							f_uvR[u][v] = (int)Math.round((0.25)*cu*cv*cosine(starti, startj, u, v, f_xyR));
+							f_uvG[u][v] = (int)Math.round((0.25)*cu*cv*cosine(starti, startj, u, v, f_xyG));
+							f_uvB[u][v] = (int)Math.round((0.25)*cu*cv*cosine(starti, startj, u, v, f_xyB));
+							//System.out.print(f_uvR[u][v] +  " ");
+						    //j0 = false;
 						}
-
+					//System.out.println();
+					//i0 = false;
 				}
+				//System.out.println("End of block");
 				//System.out.println();
 				startj += 8;
+				
 			}
 			starti += 8;
+			
 		}
 		
 	}
-	public double cosine(int row, int col,int u, int v, int[][]f_xy, int[][] f_uv){
+	public double cosine(int row, int col,int u, int v, int[][] f_xy){
 		double sumCos = 0.0;
 		for(int x = row; x < row + 8; x++){
 			for(int y = col; y < col + 8; y++){
-				sumCos += f_xy[x][y] * Math.cos( ((2*x + 1)*u*Math.PI)/16.0) * Math.cos(((2*y +1)*v*Math.PI)/16.0);
+				sumCos =  sumCos + (f_xy[x][y] * Math.cos( ((2*x + 1)*u*Math.PI)/16) * Math.cos(((2*y +1)*v*Math.PI)/16));
 			}
 		}
 		return sumCos;
 	}
-	public void display(BufferedImage img, BufferedImage imgMod, int[][] f_xy, int delMode, int latency){
+	public void display(BufferedImage img, BufferedImage imgMod, int[][] f_xyR, int[][] f_xyG, int[][] f_xyB, int delMode, int latency){
 		int ind = 0;
 		for(int y = 0; y < height; y++){
 
 			for(int x = 0; x < width; x++){
+
+				int r = (f_xyR[y][x] + 128);
+				if(r < -127){
+					r = -127;
+				}
+				else if(r > 128){
+					r = 128;
+				}
+				int g = (f_xyG[y][x] + 128);
+				if(g < -127){
+					g = -127;
+				}
+				else if(g > 128){
+					g = 128;
+				}
+				int b = (f_xyB[y][x] + 128);
+				if(b < -127){
+					b= -127;
+				}
+				else if(b > 128){
+					b = 128;
+				}
 				
+				System.out.println(r + " " + g + " " + b);
+				int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
 				//int pix = ((a << 24) + (r << 16) + (g << 8) + b);
-				imgMod.setRGB(x,y,f_xy[y][x]);
+				imgMod.setRGB(x,y, pix);
 				ind++;
 			}
 		}
@@ -218,17 +269,22 @@ public class CoderDecoder{
 		// Create and store original Image
 		// 8x8 and dct Input m x n pixel grid => m x n in frequency form
 		CoderDecoder cd = new CoderDecoder();
-		int[][] f_xy = new int[height][width];
-		cd.readOriginal(imgName, img, f_xy);
-		int[][] f_uv = new int[height][width];
+		int[][] f_xyR = new int[height][width];
+		int[][] f_xyG = new int[height][width];
+		int[][] f_xyB = new int[height][width];
+
+		cd.readOriginal(imgName, img, f_xyR, f_xyG, f_xyB);
+		int[][] f_uvR = new int[height][width];
+		int[][] f_uvG = new int[height][width];
+		int[][] f_uvB = new int[height][width];
 		// Quantize DC and AC based on quantization table 
-		cd.dct_encode(f_xy,f_uv, quant);
+		cd.dct_encode(f_xyR,f_xyG, f_xyB, f_uvR,f_uvG,f_uvB, quant);
 		//Decoder
 		// Dequantize DC and AC's based on uniform quantization table
 		// Inverse DCT
-		cd.dct_decode(f_uv, f_xy, quant);
+		cd.dct_decode(f_uvR,f_uvG,f_uvB, f_xyR,f_xyG, f_xyB, quant);
 		// display image based on M parameter
-		cd.display(img, imgMod, f_xy, delMode, latency);
+		cd.display(img, imgMod, f_xyR, f_xyG, f_xyB, delMode, latency);
 		
 
 		
