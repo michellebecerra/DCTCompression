@@ -2,7 +2,8 @@ import java.io.*;
 
 public class Test{
 	static int height = 16;
-	static int width = 8;
+	static int width = 16;
+	static FileWriter file;
 	public static void main(String[] args){
 // 		double[][] test = new double[][]{{3.0, 34.0, 212.0, 250.0, 232.0, 232.0, 237.0, 237.0},
 // {3.0, 33.0, 212.0, 250.0, 232.0, 232.0, 237.0, 237.0},
@@ -20,24 +21,30 @@ public class Test{
 		// {194, 184, 137, 148, 157, 158, 150, 173},
 		// {200, 194, 148, 151, 161, 155, 148, 167},
 		// {200, 195, 172, 159, 159, 152, 156, 154}};
+		try{
+			file = new FileWriter(new File("result.txt"));
+		}catch(IOException e){
+			System.out.println(e);
+		}
+		
 
 		int[][] test = new int[][]{
-		{139, 144, 149, 153, 155, 155, 155, 155},
-		{144, 151, 153, 156, 159, 156, 156, 156},
-		{150, 155, 160, 163, 158, 156, 156, 156},
-		{159, 161, 162, 160, 160, 159, 159, 159},
-		{159, 160, 161, 162, 162, 155, 155, 155},
-		{161, 161, 161, 161, 160, 157, 157, 157},
-		{162, 162, 161, 163, 162, 157, 157, 157},
-		{162, 162, 161, 161, 163, 158, 158, 158},
-		{178, 187, 183, 175, 178, 177, 150, 183},
-		{191, 174, 171, 182, 176, 171, 170, 188},
-		{199, 153, 128, 177, 171, 167, 173, 183},
-		{95,  178, 158, 167, 167, 165, 166, 177},
-		{190, 186, 158, 155, 159, 164, 158, 178},
-		{194, 184, 137, 148, 157, 158, 150, 173},
-		{200, 194, 148, 151, 161, 155, 148, 167},
-		{200, 195, 172, 159, 159, 152, 156, 154}};
+		{139, 144, 149, 153, 155, 155, 155, 155,139, 144, 149, 153, 155, 155, 155, 155},
+		{144, 151, 153, 156, 159, 156, 156, 156,144, 151, 153, 156, 159, 156, 156, 156},
+		{150, 155, 160, 163, 158, 156, 156, 156,150, 155, 160, 163, 158, 156, 156, 156},
+		{159, 161, 162, 160, 160, 159, 159, 159,159, 161, 162, 160, 160, 159, 159, 159},
+		{159, 160, 161, 162, 162, 155, 155, 155,159, 160, 161, 162, 162, 155, 155, 155},
+		{161, 161, 161, 161, 160, 157, 157, 157,161, 161, 161, 161, 160, 157, 157, 157},
+		{162, 162, 161, 163, 162, 157, 157, 157,162, 162, 161, 163, 162, 157, 157, 157},
+		{162, 162, 161, 161, 163, 158, 158, 158,162, 162, 161, 161, 163, 158, 158, 158},
+		{139, 144, 149, 153, 155, 155, 155, 155,139, 144, 149, 153, 155, 155, 155, 155},
+		{144, 151, 153, 156, 159, 156, 156, 156,144, 151, 153, 156, 159, 156, 156, 156},
+		{150, 155, 160, 163, 158, 156, 156, 156,150, 155, 160, 163, 158, 156, 156, 156},
+		{159, 161, 162, 160, 160, 159, 159, 159,159, 161, 162, 160, 160, 159, 159, 159},
+		{159, 160, 161, 162, 162, 155, 155, 155,159, 160, 161, 162, 162, 155, 155, 155},
+		{161, 161, 161, 161, 160, 157, 157, 157,161, 161, 161, 161, 160, 157, 157, 157},
+		{162, 162, 161, 163, 162, 157, 157, 157,162, 162, 161, 163, 162, 157, 157, 157},
+		{162, 162, 161, 161, 163, 158, 158, 158,162, 162, 161, 161, 163, 158, 158, 158}};
 
 		int[][] f_uvR = new int[height][width];
 	    dct(test, f_uvR);
@@ -58,7 +65,7 @@ public class Test{
 
 		double cu,cv;
 		int starti = 0;
-		
+		try{
 		while(starti != height){
 			int startj = 0;
 			while(startj != width){
@@ -81,20 +88,30 @@ public class Test{
                     			cv = 1.0;
                     		}
 							//quantize here as well?
-                    		System.out.println("D ui: " + ui + "vi: " + vi);
+                    		//System.out.println("D ui: " + ui + " vi: " + vi);
+                    		
+                    		//file.write("DCT ui: " + ui + " vi: " + vi + " u " + u + " v " + v + "\n");
+
+
 							f_uvR[u][v] = (int)Math.round((0.25)*cu*cv*cosine(starti, startj, ui, vi, f_xyR));
 							vi++;
 							//f_uv[u][v] = (1.0/4.0)*cosine(starti, startj, u, v, f_xy, f_uv)
-							//System.out.print( f_uvR[u][v] + " ");
+							//System.out.print("f(u,v) " +  f_uvR[u][v] + " ");
+							file.write(f_uvR[u][v] + "        ");
 						}
 						ui++;
-						System.out.println();
+						file.write("\n");
+						//System.out.println();
 
 				}
-				System.out.println("End of block ");
+				//System.out.println("End of block ");
 				startj += 8;
 			}
 			starti += 8;
+		}
+		file.close();
+		}catch(IOException e){
+			System.out.println(e);
 		}
 	}
 
@@ -102,15 +119,23 @@ public class Test{
 		int xi = 0;
 		int yi = 0;
 		double sumCos = 0.0;
+		//try{
 		for(int x = row; x < row + 8; x++){
 			yi=0;
 			for(int y = col; y < col + 8; y++){
-				System.out.println("C x: " + xi + "y: "  + yi);
+				//System.out.println("Cos x: " + xi + " y: "  + yi + " i: " + x  + " j: " + y);
+				
+				//file.write("Cos x: " + xi + " y: "  + yi + " i: " + x  + " j: " + y + "\n");
+
 				sumCos =  sumCos + (f_xy[x][y] * Math.cos( ((2*xi + 1)*u*Math.PI)/16) * Math.cos(((2*yi +1)*v*Math.PI)/16));
 				yi++;
 			}
+			//file.write(" new row\n");
 			xi++;
 		}
+		//}catch(IOException e){
+			//System.out.println(e);
+		//}
 		return sumCos;
 	}
 
@@ -128,9 +153,9 @@ public class Test{
 				for(int x = starti; x < starti + 8; x++){
 					yi = 0;
 					for(int y = startj; y < startj + 8; y++){
-						System.out.println("I x: " + xi + "y: "  + yi);
+						//System.out.println("I x: " + xi + " y: "  + yi);
 						f_xyR[x][y] = (int)Math.round((0.25)*inverse_cosine(starti, startj, xi,yi,f_uvR));
-						//System.out.print( ((f_xyR[x][y] + 128)) + " ");
+						//System.out.print( "f(x,y) " + ((f_xyR[x][y])) + " ");
 						yi++;
 					}
 					//System.out.println();
@@ -163,7 +188,7 @@ public class Test{
         			else{
             			cv = 1.0;
             		}
-            	System.out.println("ID ui: " + ui + "vi: " + vi);
+            	//System.out.println("ID ui: " + ui + " vi: " + vi);
 				sum =  sum + (cu*cv*f_uv[u][v]*Math.cos( ((2*x + 1)*ui*Math.PI)/16) * Math.cos(((2*y +1)*vi*Math.PI)/16));
 				vi++;
 			}

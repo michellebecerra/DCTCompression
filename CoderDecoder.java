@@ -115,7 +115,6 @@ public class CoderDecoder{
 		for(int u = row; u < row + 8; u++){
 			vi = 0;
 			for(int v = col; v < col + 8; v++){
-				vi++;
 					if (ui == 0){
             			cu = 1.0/ Math.sqrt(2);
             		}
