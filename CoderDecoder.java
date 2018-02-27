@@ -89,38 +89,40 @@ public class CoderDecoder{
 		while(starti != height){
 			int startj =0;
 			while(startj != width){
+				xi = 0;
 				for(int x = starti; x < starti + 8; x++){
+					yi = 0;
 					for(int y = startj; y < startj + 8; y++){
 						f_xyR[x][y] = (int)Math.round((0.25)*inverse_cosine(starti, startj, xi,yi,f_uvR));
 						f_xyG[x][y] = (int)Math.round((0.25)*inverse_cosine(starti, startj, xi,yi,f_uvG));
 						f_xyB[x][y] = (int)Math.round((0.25)*inverse_cosine(starti, startj, xi,yi,f_uvB));
 						yi++;
 					}
-					yi = 0;
 					xi++;
 				}
-				xi = 0;
 				startj += 8;
 			}
 			starti += 8;
 		}
 	}
 	public double inverse_cosine(int row, int col,int x, int y, int[][] f_uv){
+		
+		int ui = 0;
+		int vi = 0;
+
 		double sum = 0.0;
 		double cu, cv;
-		int ui = -1;
-		int vi = -1;
 		for(int u = row; u < row + 8; u++){
-			ui++;
+			vi = 0;
 			for(int v = col; v < col + 8; v++){
 				vi++;
-					if (u == 0){
+					if (ui == 0){
             			cu = 1.0/ Math.sqrt(2);
             		}
         			else{
             			cu = 1.0;
              		}
-        			if (v == 0){
+        			if (vi == 0){
         				//System.out.println("v:  " + u + " " + v);
             			cv = 1.0/ Math.sqrt(2);
             		}
@@ -128,36 +130,39 @@ public class CoderDecoder{
             			cv = 1.0;
             		}
 				sum =  sum + (cu*cv*f_uv[u][v]*Math.cos( ((2*x + 1)*ui*Math.PI)/16) * Math.cos(((2*y +1)*vi*Math.PI)/16));
+				vi++;
 			}
+			ui++;
 		}
 		return sum;
 	}
 	public void dct_encode(int[][] f_xyR, int[][] f_xyG, int[][] f_xyB, int[][] f_uvR, int[][] f_uvG, int[][] f_uvB, int quant){
 		int q = (int)Math.pow(2, quant);
 
-		//break into 8x8 
-		double cu,cv;
 		int ui = 0;
 		int vi = 0;
+		//break into 8x8 
+		double cu,cv;
 		int starti = 0;
 		//boolean i0 = true;
 		while(starti != height){ 
 			int startj = 0;
 			//boolean j0 = true;
 			while(startj != width){
+				ui = 0;
 				//and feed it to cosine function block by block
 				for(int u = starti; u < starti + 8; u++){
-					
+						vi = 0;
 						for(int v = startj; v < startj + 8; v++){
 
 							//System.out.print( u + "," + v + "  ");
-							if (u == 0){
+							if (ui == 0){
                     			cu = 1.0/ Math.sqrt(2);
                     		}
                 			else{
                     			cu = 1.0;
                      		}
-                			if (v == 0){
+                			if (vi == 0){
                 				//System.out.println("v:  " + u + " " + v);
                     			cv = 1.0/ Math.sqrt(2);
                     		}
@@ -172,12 +177,11 @@ public class CoderDecoder{
 							//System.out.print(f_uvR[u][v] +  " ");
 						    //j0 = false;
 						}
-						vi = 0;
+					
 						ui++;
 					//System.out.println();
 					//i0 = false;
 				}
-				ui = 0;
 				//System.out.println("End of block");
 				//System.out.println();
 				startj += 8;
@@ -189,15 +193,18 @@ public class CoderDecoder{
 		
 	}
 	public double cosine(int row, int col,int u, int v, int[][] f_xy){
+		int xi = 0;
+		int yi = 0;
+
 		double sumCos = 0.0;
-		int xi = -1;
-		int yi = -1;
 		for(int x = row; x < row + 8; x++){
-			xi++;
+			yi = 0;
 			for(int y = col; y < col + 8; y++){
-				yi++;
+				
 				sumCos =  sumCos + (f_xy[x][y] * Math.cos( ((2*xi + 1)*u*Math.PI)/16) * Math.cos(((2*yi +1)*v*Math.PI)/16));
+				yi++;
 			}
+			xi++;
 		}
 		return sumCos;
 	}
