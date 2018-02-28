@@ -42,7 +42,7 @@ public class CoderDecoder{
 				for(int x = 0; x < width; x++){
 
 					//Get bytes per pixel and per each channel
-					byte a = 0;
+					//byte a = 0;
 					byte r = bytes[ind];
 					byte g = bytes[ind+height*width];
 					byte b = bytes[ind+height*width*2]; 
@@ -50,9 +50,9 @@ public class CoderDecoder{
 
 					//System.out.println(r);
 					//Save to f(x,y) 2D matrix range -127 to 128 for DCT
-					f_xyR[y][x] = (r);
-					f_xyG[y][x] = (g);
-					f_xyB[y][x] = (b);
+					f_xyR[y][x] = (r & 0xff);
+					f_xyG[y][x] = (g & 0xff);
+					f_xyB[y][x] = (b & 0xff);
 
 					// if( 0 <= x && x <= 7 && 0 <= y && y <= 7){
 					// 	System.out.print(f_xyR[y][x] + " ");
@@ -143,10 +143,8 @@ public class CoderDecoder{
 		//break into 8x8 
 		double cu,cv;
 		int starti = 0;
-		//boolean i0 = true;
 		while(starti != height){ 
 			int startj = 0;
-			//boolean j0 = true;
 			while(startj != width){
 				ui = 0;
 				//and feed it to cosine function block by block
@@ -214,28 +212,28 @@ public class CoderDecoder{
 			for(int x = 0; x < width; x++){
 
 				int r = (f_xyR[y][x]);
-				// if(r < -127){
-				// 	r = -127;
-				// }
-				// else if(r > 128){
-				// 	r = 128;
-				// }
+				if(r < 0){
+					r = 0;
+				}
+				else if(r > 255){
+					r = 255;
+				}
 				int g = (f_xyG[y][x]);
-				// if(g < -127){
-				// 	g = -127;
-				// }
-				// else if(g > 128){
-				// 	g = 128;
-				// }
+				if(g < 0){
+					g = 0;
+				}
+				else if(g > 255){
+					g = 255;
+				}
 				int b = (f_xyB[y][x]);
-				// if(b < -127){
-				// 	b= -127;
-				// }
-				// else if(b > 128){
-				// 	b = 128;
-				// }
+				if(b < 0){
+					b = 0;
+				}
+				else if(b > 255){
+					b = 255;
+				}
 				
-				System.out.println(r + " " + g + " " + b);
+				//System.out.println(r + " " + g + " " + b);
 				int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
 				//int pix = ((a << 24) + (r << 16) + (g << 8) + b);
 				imgMod.setRGB(x,y, pix);
