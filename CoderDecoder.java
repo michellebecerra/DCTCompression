@@ -47,29 +47,15 @@ public class CoderDecoder{
 					byte g = bytes[ind+height*width];
 					byte b = bytes[ind+height*width*2]; 
 
-
-					//System.out.println(r);
-					//Save to f(x,y) 2D matrix range -127 to 128 for DCT
 					f_xyR[y][x] = (r & 0xff);
 					f_xyG[y][x] = (g & 0xff);
 					f_xyB[y][x] = (b & 0xff);
 
-					// if( 0 <= x && x <= 7 && 0 <= y && y <= 7){
-					// 	System.out.print(f_xyR[y][x] + " ");
-					// }
-					//System.out.println("byte " + (r & 0xff) + " " + (g & 0xff) + " " + (b & 0xff));
-
 					int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
 					//int pix = ((a << 24) + (r << 16) + (g << 8) + b);
-
-
-					//System.out.print(f_xy[y][x] +  " ");
 					img.setRGB(x,y,pix);
 					ind++;
 				}
-				// if(0 <= y && y <= 7){
-				// 	System.out.println();
-				// }
 				
 			}
 
@@ -82,6 +68,14 @@ public class CoderDecoder{
 	}
 	public void dct_decode(int[][] f_uvR, int[][] f_uvG, int[][] f_uvB, int[][] f_xyR, int[][] f_xyG, int[][] f_xyB, int quant){
 		//dequantize
+ 		for(int i = 0; i < height; i++){
+ 			for(int j = 0; j < width; j++){
+ 				f_uvR[i][j] = f_uvR[i][j]* (int)Math.pow(2,quant);
+ 				f_uvG[i][j] = f_uvG[i][j]* (int)Math.pow(2,quant);
+ 				f_uvB[i][j] = f_uvB[i][j]* (int)Math.pow(2,quant);
+ 			}
+ 		}
+
  		int xi = 0;
  		int yi = 0;
 		//do inverse function
@@ -122,7 +116,6 @@ public class CoderDecoder{
             			cu = 1.0;
              		}
         			if (vi == 0){
-        				//System.out.println("v:  " + u + " " + v);
             			cv = 1.0/ Math.sqrt(2);
             		}
         			else{
@@ -166,23 +159,17 @@ public class CoderDecoder{
                 			else{
                     			cv = 1.0;
                     		}
-							//quantize here as well?
-							f_uvR[u][v] = (int)Math.round((0.25)*cu*cv*cosine(starti, startj, ui, vi, f_xyR));
-							f_uvG[u][v] = (int)Math.round((0.25)*cu*cv*cosine(starti, startj, ui, vi, f_xyG));
-							f_uvB[u][v] = (int)Math.round((0.25)*cu*cv*cosine(starti, startj, ui, vi, f_xyB));
+							//quantize here
+							f_uvR[u][v] = (int)Math.round( ((0.25)*cu*cv*cosine(starti, startj, ui, vi, f_xyR))/q);
+							f_uvG[u][v] = (int)Math.round( ((0.25)*cu*cv*cosine(starti, startj, ui, vi, f_xyG))/q);
+							f_uvB[u][v] = (int)Math.round( ((0.25)*cu*cv*cosine(starti, startj, ui, vi, f_xyB))/q);
 							vi++;
-							//System.out.print(f_uvR[u][v] +  " ");
-						    //j0 = false;
 						}
 					
-						ui++;
-					//System.out.println();
-					//i0 = false;
+					ui++;
 				}
 				//System.out.println("End of block");
-				//System.out.println();
 				startj += 8;
-				
 			}
 			starti += 8;
 			
@@ -205,52 +192,49 @@ public class CoderDecoder{
 		}
 		return sumCos;
 	}
-	public void display(BufferedImage img, BufferedImage imgMod, int[][] f_xyR, int[][] f_xyG, int[][] f_xyB, int delMode, int latency){
-		int ind = 0;
+	public void clampValues(int[][] f_xyR, int[][] f_xyG, int[][] f_xyB){
 		for(int y = 0; y < height; y++){
 
 			for(int x = 0; x < width; x++){
 
+				//Clamp values < 0 and > 255
 				int r = (f_xyR[y][x]);
 				if(r < 0){
-					r = 0;
+					f_xyR[y][x] = 0;
 				}
 				else if(r > 255){
-					r = 255;
+					f_xyR[y][x] = 255;
 				}
 				int g = (f_xyG[y][x]);
 				if(g < 0){
-					g = 0;
+					f_xyG[y][x] = 0;
 				}
 				else if(g > 255){
-					g = 255;
+					f_xyG[y][x] = 255;
 				}
 				int b = (f_xyB[y][x]);
 				if(b < 0){
-					b = 0;
+					f_xyB[y][x] = 0;
 				}
 				else if(b > 255){
-					b = 255;
+					f_xyB[y][x] = 255;
 				}
-				
-				//System.out.println(r + " " + g + " " + b);
-				int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
-				//int pix = ((a << 24) + (r << 16) + (g << 8) + b);
-				imgMod.setRGB(x,y, pix);
-				ind++;
 			}
 		}
-		// Use labels to display the images
-		frame = new JFrame();
-		GridBagLayout gLayout = new GridBagLayout();
-		frame.getContentPane().setLayout(gLayout);
+	}
+	public void display(BufferedImage img, BufferedImage imgMod, int[][] f_xyR, int[][] f_xyG, int[][] f_xyB, int delMode, int latency){
+		//clamp values less than 0 and greater than 255
+		clampValues(f_xyR, f_xyG, f_xyB);
 
 		JLabel lbText1 = new JLabel("Original image (Left)");
 		lbText1.setHorizontalAlignment(SwingConstants.CENTER);
 		JLabel lbText2 = new JLabel("Image after modification (Right)");
 		lbText2.setHorizontalAlignment(SwingConstants.CENTER);
-		lbIm1 = new JLabel(new ImageIcon(img));
-		lbIm2 = new JLabel(new ImageIcon(imgMod));
+		frame = new JFrame();
+		GridBagLayout gLayout = new GridBagLayout();
+		frame.getContentPane().setLayout(gLayout);
+
+
 
 		GridBagConstraints c = new GridBagConstraints();
 		c.fill = GridBagConstraints.HORIZONTAL;
@@ -267,16 +251,57 @@ public class CoderDecoder{
 		c.gridy = 0;
 		frame.getContentPane().add(lbText2, c);
 
+		lbIm1 = new JLabel(new ImageIcon(img));
 		c.fill = GridBagConstraints.HORIZONTAL;
 		c.gridx = 0;
 		c.gridy = 1;
 		frame.getContentPane().add(lbIm1, c);
 
-		c.fill = GridBagConstraints.HORIZONTAL;
-		c.gridx = 1;
-		c.gridy = 1;
-		frame.getContentPane().add(lbIm2, c);
+		//Baseline set all to black first
+		for(int y = 0; y < height; y++){
+			for(int x = 8; x < width; x++){
+				int r = 0;
+				int g = 0;
+				int b = 0;
+				int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
+				imgMod.setRGB(x,y, pix);
+			}
+		}
 
+		int starti = 0;
+		while(starti != height){ 
+			int startj = 0;
+			while(startj != width){
+				for(int x = starti; x < starti + 8; x++){
+					for(int y = startj; y < startj + 8; y++){
+						int r = f_xyR[x][y];
+						int g = f_xyG[x][y];
+						int b = f_xyB[x][y];
+
+				//System.out.println(r + " " + g + " " + b);
+						int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
+						imgMod.setRGB(y,x, pix);
+						//ind++;
+					}
+				}
+				//create new lib
+				lbIm2 = new JLabel(new ImageIcon(imgMod));
+				c.fill = GridBagConstraints.HORIZONTAL;
+				c.gridx = 1;
+				c.gridy = 1;
+				frame.getContentPane().add(lbIm2, c);
+				frame.pack();
+				frame.setVisible(true);
+				//sleep
+				try{
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				startj += 8;
+			}
+			starti += 8;
+		}
 		frame.pack();
 		frame.setVisible(true);
 	}
