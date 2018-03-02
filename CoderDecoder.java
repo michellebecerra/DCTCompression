@@ -3,6 +3,7 @@ import java.awt.*;
 import java.awt.image.*;
 import java.io.*;
 import javax.swing.*;
+import java.util.*;
 
 
 
@@ -15,6 +16,18 @@ public class CoderDecoder{
 	JLabel lbIm1;
 	JLabel lbIm2;
 	BufferedImage img;
+
+	HashMap<Integer, ZigIndex> map;
+
+	public class ZigIndex{
+		int x;
+		int y;
+		public ZigIndex(int x, int y){
+			this.x = x;
+			this.y = y;
+		}
+
+	}
 
 	/**
 	* Converts RGB to YUV and stores the values in double precision. 
@@ -66,15 +79,18 @@ public class CoderDecoder{
 			e.printStackTrace();
 		}
 	}
-	public void dct_decode(int[][] f_uvR, int[][] f_uvG, int[][] f_uvB, int[][] f_xyR, int[][] f_xyG, int[][] f_xyB, int quant){
-		//dequantize
- 		for(int i = 0; i < height; i++){
+	public void dequantize(int[][] f_uvR, int[][] f_uvG, int[][] f_uvB,int quant){
+		for(int i = 0; i < height; i++){
  			for(int j = 0; j < width; j++){
  				f_uvR[i][j] = f_uvR[i][j]* (int)Math.pow(2,quant);
  				f_uvG[i][j] = f_uvG[i][j]* (int)Math.pow(2,quant);
  				f_uvB[i][j] = f_uvB[i][j]* (int)Math.pow(2,quant);
  			}
  		}
+	}
+	public void dct_decode(int[][] f_uvR, int[][] f_uvG, int[][] f_uvB, int[][] f_xyR, int[][] f_xyG, int[][] f_xyB){
+		//dequantize
+
 
  		int xi = 0;
  		int yi = 0;
@@ -222,9 +238,8 @@ public class CoderDecoder{
 			}
 		}
 	}
-	public void display(BufferedImage img, BufferedImage imgMod, int[][] f_xyR, int[][] f_xyG, int[][] f_xyB, int delMode, int latency){
-		//clamp values less than 0 and greater than 255
-		clampValues(f_xyR, f_xyG, f_xyB);
+	public void decodeAndDisplay(BufferedImage img, BufferedImage imgMod, int[][] f_xyR, int[][] f_xyG, int[][] f_xyB, int[][] f_uvR, int[][] f_uvG, int[][] f_uvB, int delMode, int latency){
+
 
 		JLabel lbText1 = new JLabel("Original image (Left)");
 		lbText1.setHorizontalAlignment(SwingConstants.CENTER);
@@ -235,7 +250,7 @@ public class CoderDecoder{
 		frame.getContentPane().setLayout(gLayout);
 
 
-
+		//Initializations and settings for image 1 original
 		GridBagConstraints c = new GridBagConstraints();
 		c.fill = GridBagConstraints.HORIZONTAL;
 		c.anchor = GridBagConstraints.CENTER;
@@ -258,33 +273,99 @@ public class CoderDecoder{
 		frame.getContentPane().add(lbIm1, c);
 
 		//Baseline set all to black first
-		for(int y = 0; y < height; y++){
-			for(int x = 8; x < width; x++){
-				int r = 0;
-				int g = 0;
-				int b = 0;
-				int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
-				imgMod.setRGB(x,y, pix);
+		if(delMode == 1){
+			for(int y = 0; y < height; y++){
+				for(int x = 8; x < width; x++){
+					int r = 0;
+					int g = 0;
+					int b = 0;
+					int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
+					imgMod.setRGB(x,y, pix);
+				}
+			}
+			//decode 
+			dct_decode(f_uvR,f_uvG,f_uvB, f_xyR,f_xyG, f_xyB);
+			//clamp values less than 0 and greater than 255
+			clampValues(f_xyR, f_xyG, f_xyB);
+			int starti = 0;
+			while(starti != height){ 
+				int startj = 0;
+				while(startj != width){
+					for(int x = starti; x < starti + 8; x++){
+						for(int y = startj; y < startj + 8; y++){
+							int r = f_xyR[x][y];
+							int g = f_xyG[x][y];
+							int b = f_xyB[x][y];
+
+					//System.out.println(r + " " + g + " " + b);
+							int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
+							imgMod.setRGB(y,x, pix);
+							//ind++;
+						}
+					}
+					//create new JLabel and image 
+					lbIm2 = new JLabel(new ImageIcon(imgMod));
+					c.fill = GridBagConstraints.HORIZONTAL;
+					c.gridx = 1;
+					c.gridy = 1;
+					frame.getContentPane().add(lbIm2, c);
+					frame.pack();
+					frame.setVisible(true);
+					//sleep
+					try{
+						Thread.sleep(latency);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					startj += 8;
+				}
+				starti += 8;
 			}
 		}
+		else if(delMode == 2){
+			map = new HashMap<Integer, ZigIndex>();
+			zigzag();	
 
-		int starti = 0;
-		while(starti != height){ 
-			int startj = 0;
-			while(startj != width){
-				for(int x = starti; x < starti + 8; x++){
-					for(int y = startj; y < startj + 8; y++){
-						int r = f_xyR[x][y];
-						int g = f_xyG[x][y];
-						int b = f_xyB[x][y];
+			int[][] fuv_copyR = new int[height][width];
+			int[][] fuv_copyG = new int[height][width];
+			int[][] fuv_copyB = new int[height][width];
 
-				//System.out.println(r + " " + g + " " + b);
-						int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
-						imgMod.setRGB(y,x, pix);
-						//ind++;
+			int[][] fxy_copyR = new int[height][width];
+			int[][] fxy_copyG = new int[height][width];
+			int[][] fxy_copyB = new int[height][width];
+
+			for(int i = 0; i < 64; i++){
+				ZigIndex zi = map.get(i);
+
+				for(int starti = 0; starti < height; starti= starti + 8){
+					for(int startj = 0; startj < width; startj = startj + 8){
+						fuv_copyR[starti + zi.x][startj + zi.y] = f_uvR[starti + zi.x][startj + zi.y];
+						fuv_copyG[starti + zi.x][startj + zi.y] = f_uvG[starti + zi.x][startj + zi.y];
+						fuv_copyB[starti + zi.x][startj + zi.y] = f_uvB[starti + zi.x][startj + zi.y];
+						
 					}
 				}
-				//create new lib
+				//IDCT
+				dct_decode(fuv_copyR,fuv_copyG,fuv_copyB, fxy_copyR,fxy_copyG, fxy_copyB);
+				//clamp values
+				clampValues(fxy_copyR,fxy_copyG, fxy_copyB);
+				//display
+				for(int y = 0; y < height; y++){
+
+					for(int x = 0; x < width; x++){
+
+						int r = fxy_copyR[y][x];
+						int g = fxy_copyG[y][x];
+						int b = fxy_copyB[y][x];
+
+
+						int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
+						//int pix = ((a << 24) + (r << 16) + (g << 8) + b);
+						imgMod.setRGB(x,y,pix);
+					}
+				
+				}
+				//create new JLabel and image 
 				lbIm2 = new JLabel(new ImageIcon(imgMod));
 				c.fill = GridBagConstraints.HORIZONTAL;
 				c.gridx = 1;
@@ -293,17 +374,92 @@ public class CoderDecoder{
 				frame.pack();
 				frame.setVisible(true);
 				//sleep
-				try{
-					Thread.sleep(1000);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-				startj += 8;
+				// try{
+				// 	Thread.sleep(latency);
+				// } catch (InterruptedException e) {
+				// 		e.printStackTrace();
+				// }
+			// printArray(zig_copy);
+			// System.out.println("New AC coefficient");
 			}
-			starti += 8;
 		}
-		frame.pack();
-		frame.setVisible(true);
+		// frame.pack();
+		// frame.setVisible(true);
+	}
+	public  void zigzag(){
+		int left = 0;
+		int right = (0 + 8) - 1; 
+		int top = 0;
+		int bottom = (0 + 8) - 1;
+
+		int key = 0;
+		//go southwest and down and
+		//northeast and east until we get to top right corner which will be starti, (startj + 8) - 1 => right
+		int i = 0;
+		int j = 0;
+
+		map.put(key++, new ZigIndex(i,j));
+
+		j = j+1;
+		map.put(key++, new ZigIndex(i,j));
+		//while we're not at the top right corner
+		while( j != right){
+			//southwest
+			while(j > left){
+				i++;
+				j--;
+				map.put(key++, new ZigIndex(i,j));
+
+			}
+			
+			//down
+			i++;
+			map.put(key++, new ZigIndex(i,j));
+			//northeast
+			while(i > top){
+				i--;
+				j++;
+				map.put(key++, new ZigIndex(i,j));
+
+			}
+			
+			//right
+			j++;
+			map.put(key++, new ZigIndex(i,j));
+
+		}
+		//while we're not at the bottom right corner
+		while(i != bottom || j != right){
+
+
+			//Southwest
+			while( i < bottom){
+				i++;
+				j--;
+				map.put(key++, new ZigIndex(i,j));
+
+			}
+			//right
+			j++;
+			map.put(key++, new ZigIndex(i,j));
+
+			if(i == bottom && j == right){
+				break;
+			}
+			
+			//northeast
+			while( j < right){
+				i--;
+				j++;
+				map.put(key++, new ZigIndex(i,j));
+
+			}
+			//down
+			i++;
+			map.put(key++, new ZigIndex(i,j));
+
+		}
+
 	}
 
 	public static void main(String[] args) {
@@ -331,9 +487,10 @@ public class CoderDecoder{
 		//Decoder
 		// Dequantize DC and AC's based on uniform quantization table
 		// Inverse DCT
-		cd.dct_decode(f_uvR,f_uvG,f_uvB, f_xyR,f_xyG, f_xyB, quant);
+		cd.dequantize(f_uvR, f_uvG, f_uvB, quant);
+		//cd.dct_decode(f_uvR,f_uvG,f_uvB, f_xyR,f_xyG, f_xyB);
 		// display image based on M parameter
-		cd.display(img, imgMod, f_xyR, f_xyG, f_xyB, delMode, latency);
+		cd.decodeAndDisplay(img, imgMod, f_xyR, f_xyG, f_xyB, f_uvR, f_uvG, f_uvB, delMode, latency);
 		
 
 		

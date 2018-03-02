@@ -1,9 +1,21 @@
 import java.io.*;
+import java.util.*;
 
 public class Test{
 	static int height = 16;
 	static int width = 16;
 	static FileWriter file;
+	static HashMap<Integer, ZigIndex> map = new HashMap<Integer, ZigIndex>();
+	static class ZigIndex{
+		int x;
+		int y;
+		public ZigIndex(int x, int y){
+			this.x = x;
+			this.y = y;
+		}
+
+	}
+
 	public static void main(String[] args){
 // 		double[][] test = new double[][]{{3.0, 34.0, 212.0, 250.0, 232.0, 232.0, 237.0, 237.0},
 // {3.0, 33.0, 212.0, 250.0, 232.0, 232.0, 237.0, 237.0},
@@ -21,6 +33,8 @@ public class Test{
 		// {194, 184, 137, 148, 157, 158, 150, 173},
 		// {200, 194, 148, 151, 161, 155, 148, 167},
 		// {200, 195, 172, 159, 159, 152, 156, 154}};
+
+
 		try{
 			file = new FileWriter(new File("result.txt"));
 		}catch(IOException e){
@@ -29,7 +43,7 @@ public class Test{
 		
 
 		int[][] test = new int[][]{
-		{139, 144, 149, 153, 155, 155, 155, 155,139, 144, 149, 153, 155, 155, 155, 155},
+		{139, 145, 149, 153, 155, 155, 155, 155,139, 145, 149, 153, 155, 155, 155, 155},
 		{144, 151, 153, 156, 159, 156, 156, 156,144, 151, 153, 156, 159, 156, 156, 156},
 		{150, 155, 160, 163, 158, 156, 156, 156,150, 155, 160, 163, 158, 156, 156, 156},
 		{159, 161, 162, 160, 160, 159, 159, 159,159, 161, 162, 160, 160, 159, 159, 159},
@@ -37,7 +51,7 @@ public class Test{
 		{161, 161, 161, 161, 160, 157, 157, 157,161, 161, 161, 161, 160, 157, 157, 157},
 		{162, 162, 161, 163, 162, 157, 157, 157,162, 162, 161, 163, 162, 157, 157, 157},
 		{162, 162, 161, 161, 163, 158, 158, 158,162, 162, 161, 161, 163, 158, 158, 158},
-		{139, 144, 149, 153, 155, 155, 155, 155,139, 144, 149, 153, 155, 155, 155, 155},
+		{139, 145, 149, 153, 155, 155, 155, 155,139, 145, 149, 153, 155, 155, 155, 155},
 		{144, 151, 153, 156, 159, 156, 156, 156,144, 151, 153, 156, 159, 156, 156, 156},
 		{150, 155, 160, 163, 158, 156, 156, 156,150, 155, 160, 163, 158, 156, 156, 156},
 		{159, 161, 162, 160, 160, 159, 159, 159,159, 161, 162, 160, 160, 159, 159, 159},
@@ -46,10 +60,36 @@ public class Test{
 		{162, 162, 161, 163, 162, 157, 157, 157,162, 162, 161, 163, 162, 157, 157, 157},
 		{162, 162, 161, 161, 163, 158, 158, 158,162, 162, 161, 161, 163, 158, 158, 158}};
 
-		int[][] f_uvR = new int[height][width];
-	    dct(test, f_uvR);
-	    dct_decode(f_uvR, test, 0);
+	 // int[][] f_uvR = new int[height][width];
+	 //    dct(test, f_uvR);
+	 //    dct_decode(f_uvR, test, 0);
 
+		int[][] zig_copy = new int[height][width];
+
+		zigzag();
+		for(int i = 1; i < 64; i++){
+			ZigIndex zi = map.get(i);
+			for(int starti = 0; starti < height; starti= starti + 8){
+				for(int startj = 0; startj < width; startj = startj + 8){
+					zig_copy[starti + zi.x][startj + zi.y] = test[starti + zi.x][startj + zi.y];
+					
+				}
+			}
+		
+			printArray(zig_copy);
+			System.out.println("New AC coefficient");
+
+			//System.out.println("(" + zi.x + " " + zi.y + ")");
+		}
+	}
+
+	public static void printArray(int[][] arr){
+		for(int i = 0; i < arr.length; i++){
+			for(int j = 0; j < arr[0].length; j++){
+				System.out.print(arr[i][j] + " ");
+			}
+			System.out.println();
+		}
 	}
 		
 	public static void dct(int[][] f_xyR, int[][] f_uvR){
@@ -196,12 +236,81 @@ public class Test{
 		}
 		return sum;
 	}
+	//=> dequantize [1 2] [1 2] => first value of every square is "on" => [1 0] [1 0] => IDCT => display  second value on [1 2] [1 2]  => IDCT => display
+	//				[3 4] [3 4]											  [0 0] [0 0]									  [0 0] [0 0]
+	//				[1 2] [1 2]	=> 	third value of every sqaure is "on" => [1 2]									   										   
+	// 				[3 4] [3 4]											   [3 0]
+	public static void zigzag(){
+		int left = 0;
+		int right = (0 + 8) - 1; 
+		int top = 0;
+		int bottom = (0 + 8) - 1;
 
-	// public static void zigzag(double[][] mat){
-	// 	while(j != 0){
-	// 		i++;
-	// 		j--;
+		int key = 1;
+		//go southwest and down and
+		//northeast and east until we get to top right corner which will be starti, (startj + 8) - 1 => right
+		int i = 0;
+		int j = 0;
 
-	// 	}
-	// }	
+		j = j+1;
+		map.put(key++, new ZigIndex(i,j));
+		//while we're not at the top right corner
+		while( j != right){
+			//southwest
+			while(j > left){
+				i++;
+				j--;
+				map.put(key++, new ZigIndex(i,j));
+
+			}
+			
+			//down
+			i++;
+			map.put(key++, new ZigIndex(i,j));
+			//northeast
+			while(i > top){
+				i--;
+				j++;
+				map.put(key++, new ZigIndex(i,j));
+
+			}
+			
+			//right
+			j++;
+			map.put(key++, new ZigIndex(i,j));
+
+		}
+		//while we're not at the bottom right corner
+		while(i != bottom || j != right){
+
+
+			//Southwest
+			while( i < bottom){
+				i++;
+				j--;
+				map.put(key++, new ZigIndex(i,j));
+
+			}
+			//right
+			j++;
+			map.put(key++, new ZigIndex(i,j));
+
+			if(i == bottom && j == right){
+				break;
+			}
+			
+			//northeast
+			while( j < right){
+				i--;
+				j++;
+				map.put(key++, new ZigIndex(i,j));
+
+			}
+			//down
+			i++;
+			map.put(key++, new ZigIndex(i,j));
+
+		}
+
+	}	
 }
