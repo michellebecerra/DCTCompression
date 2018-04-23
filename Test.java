@@ -2,8 +2,8 @@ import java.io.*;
 import java.util.*;
 
 public class Test{
-	static int height = 16;
-	static int width = 16;
+	static int height = 8;
+	static int width = 8;
 	static FileWriter file;
 	static HashMap<Integer, ZigIndex> map = new HashMap<Integer, ZigIndex>();
 	static class ZigIndex{
@@ -65,21 +65,37 @@ public class Test{
 	 //    dct_decode(f_uvR, test, 0);
 
 		int[][] zig_copy = new int[height][width];
-
-		zigzag();
-		for(int i = 1; i < 64; i++){
-			ZigIndex zi = map.get(i);
-			for(int starti = 0; starti < height; starti= starti + 8){
-				for(int startj = 0; startj < width; startj = startj + 8){
-					zig_copy[starti + zi.x][startj + zi.y] = test[starti + zi.x][startj + zi.y];
+		int[][] test_uv = new int[height][width];
+		// zigzag();
+		// for(int i = 1; i < 64; i++){
+		// 	ZigIndex zi = map.get(i);
+		// 	for(int starti = 0; starti < height; starti= starti + 8){
+		// 		for(int startj = 0; startj < width; startj = startj + 8){
+		// 			zig_copy[starti + zi.x][startj + zi.y] = test[starti + zi.x][startj + zi.y];
 					
-				}
-			}
+		// 		}
+		// 	}
 		
-			printArray(zig_copy);
-			System.out.println("New AC coefficient");
+		// 	printArray(zig_copy);
+		// 	System.out.println("New AC coefficient");
 
-			//System.out.println("(" + zi.x + " " + zi.y + ")");
+		// 	//System.out.println("(" + zi.x + " " + zi.y + ")");
+		// }
+
+		//System.out.println(Integer.toBinaryString(-12));
+		//System.out.println(Integer.toBinaryString(12));
+
+		// dct(test, test_uv);
+		// dct_decode(test_uv, test, 0);
+
+		int t = 4;
+		System.out.println(Integer.toBinaryString(t));
+		int x = 0x80000000;
+		for(int i = 1; i < 33; i++){
+			int temp = t & x;
+			System.out.println(Integer.toBinaryString(temp));
+			x = x >> 1;
+			//System.out.println(x);
 		}
 	}
 
@@ -135,6 +151,8 @@ public class Test{
 
 							f_uvR[u][v] = (int)Math.round((0.25)*cu*cv*cosine(starti, startj, ui, vi, f_xyR));
 							vi++;
+							System.out.print( "f_uvR[u][v] " + f_uvR[u][v] + " ");
+							System.out.println(Integer.toBinaryString(f_uvR[u][v]) + " ");
 							//f_uv[u][v] = (1.0/4.0)*cosine(starti, startj, u, v, f_xy, f_uv)
 							//System.out.print("f(u,v) " +  f_uvR[u][v] + " ");
 							file.write(f_uvR[u][v] + "        ");
@@ -195,10 +213,11 @@ public class Test{
 					for(int y = startj; y < startj + 8; y++){
 						//System.out.println("I x: " + xi + " y: "  + yi);
 						f_xyR[x][y] = (int)Math.round((0.25)*inverse_cosine(starti, startj, xi,yi,f_uvR));
-						//System.out.print( "f(x,y) " + ((f_xyR[x][y])) + " ");
+						// System.out.print( "f(x,y) " + ((f_xyR[x][y])) + " ");
+						// System.out.println(Integer.toBinaryString(f_xyR[x][y]) + " ");
 						yi++;
 					}
-					//System.out.println();
+					System.out.println();
 					xi++;
 				}
 				startj += 8;

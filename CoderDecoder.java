@@ -82,9 +82,9 @@ public class CoderDecoder{
 	public void dequantize(int[][] f_uvR, int[][] f_uvG, int[][] f_uvB,int quant){
 		for(int i = 0; i < height; i++){
  			for(int j = 0; j < width; j++){
- 				f_uvR[i][j] = f_uvR[i][j]* (int)Math.pow(2,quant);
- 				f_uvG[i][j] = f_uvG[i][j]* (int)Math.pow(2,quant);
- 				f_uvB[i][j] = f_uvB[i][j]* (int)Math.pow(2,quant);
+ 				f_uvR[i][j] = (f_uvR[i][j]* (int)Math.pow(2,quant));
+ 				f_uvG[i][j] = (f_uvG[i][j]* (int)Math.pow(2,quant));
+ 				f_uvB[i][j] = (f_uvB[i][j]* (int)Math.pow(2,quant));
  			}
  		}
 	}
@@ -169,7 +169,6 @@ public class CoderDecoder{
                     			cu = 1.0;
                      		}
                 			if (vi == 0){
-                				//System.out.println("v:  " + u + " " + v);
                     			cv = 1.0/ Math.sqrt(2);
                     		}
                 			else{
@@ -345,6 +344,8 @@ public class CoderDecoder{
 						
 					}
 				}
+
+
 				//IDCT
 				dct_decode(fuv_copyR,fuv_copyG,fuv_copyB, fxy_copyR,fxy_copyG, fxy_copyB);
 				//clamp values
@@ -374,13 +375,73 @@ public class CoderDecoder{
 				frame.pack();
 				frame.setVisible(true);
 				//sleep
-				// try{
-				// 	Thread.sleep(latency);
-				// } catch (InterruptedException e) {
-				// 		e.printStackTrace();
-				// }
-			// printArray(zig_copy);
-			// System.out.println("New AC coefficient");
+				try{
+					Thread.sleep(latency);
+				} catch (InterruptedException e) {
+						e.printStackTrace();
+				}
+			}
+		}
+		else if(delMode == 3){
+			int mask = 0x80000000;
+			//int mask = 0x800;
+
+			int[][] fuv_copyR = new int[height][width];
+			int[][] fuv_copyG = new int[height][width];
+			int[][] fuv_copyB = new int[height][width];
+
+			int[][] fxy_copyR = new int[height][width];
+			int[][] fxy_copyG = new int[height][width];
+			int[][] fxy_copyB = new int[height][width];
+
+			for(int i = 1; i < 33; i++){
+				for(int starti = 0; starti < height; starti= starti + 8){
+					for(int startj = 0; startj < width; startj = startj + 8){
+						for(int x = starti; x < starti + 8; x++){
+							for(int y = startj; y < startj + 8; y++){
+								fuv_copyR[x][y] = f_uvR[x][y] & mask;
+								fuv_copyG[x][y] = f_uvG[x][y] & mask;
+								fuv_copyB[x][y] = f_uvB[x][y] & mask;
+							}
+						}
+					}
+				}
+				//call idct
+				dct_decode(fuv_copyR,fuv_copyG,fuv_copyB, fxy_copyR,fxy_copyG, fxy_copyB);
+				//clamp
+				clampValues(fxy_copyR,fxy_copyG, fxy_copyB);
+				//display
+				for(int y = 0; y < height; y++){
+
+					for(int x = 0; x < width; x++){
+
+						int r = fxy_copyR[y][x];
+						int g = fxy_copyG[y][x];
+						int b = fxy_copyB[y][x];
+
+
+						int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
+						//int pix = ((a << 24) + (r << 16) + (g << 8) + b);
+						imgMod.setRGB(x,y,pix);
+					}
+				
+				}
+				//create new JLabel and image 
+				lbIm2 = new JLabel(new ImageIcon(imgMod));
+				c.fill = GridBagConstraints.HORIZONTAL;
+				c.gridx = 1;
+				c.gridy = 1;
+				frame.getContentPane().add(lbIm2, c);
+				frame.pack();
+				frame.setVisible(true);
+				//sleep
+				try{
+					Thread.sleep(latency);
+				} catch (InterruptedException e) {
+						e.printStackTrace();
+				}
+
+				mask = mask >> 1; 
 			}
 		}
 		// frame.pack();
@@ -467,6 +528,13 @@ public class CoderDecoder{
 		int quant = Integer.parseInt(args[1]);
 		int delMode = Integer.parseInt(args[2]);
 		int latency = Integer.parseInt(args[3]);
+		if(quant > 7 || quant < 0){
+			System.out.println("Not valid quantization");
+		}
+		if(delMode > 3 || delMode < 0){
+			System.out.println("Not valid delivery mode");
+		}
+
 		BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		BufferedImage imgMod = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 
